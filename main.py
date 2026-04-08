@@ -54,6 +54,8 @@ def index():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Zrylo-AI | Enterprise Master Suite</title>
+
+        <link rel="icon" type="image/png" href="https://i.postimg.cc/DZ02jdTY/Untitled-design-2026-04-08T180617-067.png">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
             body { background-color: #050505; color: #f0f0f0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
