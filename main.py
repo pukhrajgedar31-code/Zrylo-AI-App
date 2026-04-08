@@ -138,13 +138,13 @@ def index():
             <div class="max-w-md w-full royal-card p-12 rounded-[4rem] text-center border-[#D4AF37]">
                 <h3 class="gold-text text-4xl font-black mb-6 uppercase tracking-tighter italic">6-MONTH LICENSE</h3>
                 <div class="space-y-4 mb-10">
-                    <button onclick="window.open('https://rzp.io/l/your_india_link', '_system')" class="w-full p-6 bg-black/60 border border-[#D4AF37] rounded-3xl flex justify-between items-center hover:bg-white/5">
+                    <button onclick="window.open('https://rzp.io/rzp/v3ppXAXU', '_system')" class="w-full p-6 bg-black/60 border border-[#D4AF37] rounded-3xl flex justify-between items-center hover:bg-white/5">
                         <div>
                             <p class="text-[10px] text-zinc-500 uppercase font-bold mb-1">For India</p>
                             <p class="text-3xl font-black gold-text">View Plan For India</p>
                         </div>
                     </button>
-                    <button onclick="window.open('https://stripe.com/your_global_link', '_system')" class="w-full p-6 bg-black/60 border border-zinc-800 rounded-3xl flex justify-between items-center hover:bg-white/5">
+                    <button onclick="window.open('https://rzp.io/rzp/0pNXjsv', '_system')" class="w-full p-6 bg-black/60 border border-zinc-800 rounded-3xl flex justify-between items-center hover:bg-white/5">
                         <div>
                             <p class="text-[10px] text-zinc-500 uppercase font-bold mb-1">For Global</p>
                             <p class="text-3xl font-black gold-text">View Plan For Global</p>
