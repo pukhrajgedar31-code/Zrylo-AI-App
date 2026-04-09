@@ -291,26 +291,47 @@ def index():
     </html>
     """, is_pro=is_pro)
 
-@app.route('/auth', methods=['POST'])
+@@app.route('/auth', methods=['POST'])
 def auth():
-    email = request.form.get('email')
-    password = request.form.get('password')
+    # .strip() se aage-piche ki space khatam
+    # .lower() se sab kuch chote letters mein (bhai@gmail.com)
+    email = request.form.get('email', '').strip().lower()
+    password = request.form.get('password', '').strip()
     auth_type = request.form.get('type')
+
+    if not email or not password:
+        return "Bhai, email aur password dono dalo! <a href='/'>Back</a>"
+
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    if auth_type == 'signup':
-        try:
-            c.execute("INSERT INTO users (email, password) VALUES (?, ?)", (email, password))
+    
+    try:
+        if auth_type == 'signup':
+            # Pehle check karo user pehle se hai toh nahi
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
+            if c.fetchone():
+                conn.close()
+                return "Ye Email pehle se register hai! Login karo. <a href='/'>Back</a>"
+            
+            # Naya user save karo
+            c.execute("INSERT INTO users (email, password, is_pro) VALUES (?, ?, 0)", (email, password))
             conn.commit()
             session['user'] = email
-        except:
-            return "Email exists! <a href='/'>Back</a>"
-    else:
-        c.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
-        if c.fetchone():
-            session['user'] = email
+            session.permanent = True # Isse user baar-baar logout nahi hoga
         else:
-            return "Wrong! <a href='/'>Back</a>"
+            # LOGIN LOGIC: Ekdum saaf suthra match
+            c.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
+            user = c.fetchone()
+            if user:
+                session['user'] = email
+                session.permanent = True
+            else:
+                conn.close()
+                return "Email ya Password galat hai bhai! <a href='/'>Back</a>"
+    except Exception as e:
+        conn.close()
+        return f"Database Error: {e} <a href='/'>Back</a>"
+        
     conn.close()
     return redirect(url_for('index'))
 
@@ -319,38 +340,96 @@ def logout():
     session.pop('user', None)
     return redirect(url_for('index'))
 
+@# --- ADMIN CONFIGURATION ---
+ADMIN_SECRET_KEY = "ZRYLO786"  # Ye tera master password hai
+
 @app.route('/zrylo-admin')
-def admin():
+def admin_panel():
+    # Isse kholne ke liye browser mein dalo: /zrylo-admin?key=ZRYLO786
+    key = request.args.get('key')
+    if key != ADMIN_SECRET_KEY:
+        return "<h1 style='color:red; text-align:center; margin-top:50px;'>UNAUTHORIZED ACCESS DETECTED!</h1>", 403
+
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("SELECT id, email, password, is_pro, expiry_date FROM users")
+    # Saare users ki list nikal rahe hain
+    c.execute("SELECT id, email, is_pro, expiry_date FROM users")
     users = c.fetchall()
     conn.close()
+
     return render_template_string("""
-    <body style="background:#000; color:#D4AF37; padding:50px; font-family:sans-serif;">
-        <h2>ZRYLO MASTER ADMIN</h2>
-        <table border="1" style="width:100%; border-collapse:collapse; color:white;">
-            <tr style="background:#111;"><th>ID</th><th>Email</th><th>Password</th><th>Status</th><th>Expiry</th><th>Action</th></tr>
-            {% for u in users %}
-            <tr>
-                <td>{{u[0]}}</td><td>{{u[1]}}</td><td>{{u[2]}}</td>
-                <td>{{ 'PRO' if u[3]==1 else 'FREE' }}</td><td>{{u[4]}}</td>
-                <td><a href="/admin/make-pro/{{u[0]}}" style="color:lime;">[ACTIVATE PRO 6M]</a></td>
-            </tr>
-            {% endfor %}
-        </table>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Zrylo AI | Master Admin</title>
+        <style>
+            body { background: #050505; color: #D4AF37; font-family: sans-serif; padding: 40px; }
+            .admin-container { max-width: 1000px; margin: auto; background: #0a0a0a; padding: 30px; border-radius: 20px; border: 1px solid #D4AF37; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { padding: 15px; text-align: left; border-bottom: 1px solid #222; }
+            th { color: #888; text-transform: uppercase; font-size: 12px; }
+            .status-pro { color: lime; font-weight: bold; }
+            .status-free { color: #555; }
+            .btn-activate { background: #D4AF37; color: black; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 12px; }
+            .btn-activate:hover { opacity: 0.8; }
+        </style>
+    </head>
+    <body>
+        <div class="admin-container">
+            <h1 style="letter-spacing: 5px;">ZRYLO CONTROL CENTER</h1>
+            <p style="color: #555;">Managing Enterprise Users & Subscriptions</p>
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>User Email</th>
+                    <th>Status</th>
+                    <th>Expiry Date</th>
+                    <th>Action</th>
+                </tr>
+                {% for u in users %}
+                <tr>
+                    <td>{{ u[0] }}</td>
+                    <td>{{ u[1] }}</td>
+                    <td>
+                        <span class="{{ 'status-pro' if u[2] == 1 else 'status-free' }}">
+                            {{ 'PREMIUM' if u[2] == 1 else 'FREE' }}
+                        </span>
+                    </td>
+                    <td>{{ u[3] if u[3] else 'N/A' }}</td>
+                    <td>
+                        {% if u[2] == 0 %}
+                        <a href="/admin/make-pro/{{ u[0] }}?key=ZRYLO786" class="btn-activate">ACTIVATE 6M</a>
+                        {% else %}
+                        <span style="color: #333;">ALREADY PRO</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            <br>
+            <a href="/" style="color: #333; text-decoration: none;">← Return to Main Suite</a>
+        </div>
     </body>
+    </html>
     """, users=users)
 
 @app.route('/admin/make-pro/<int:uid>')
-def make_pro(uid):
+def admin_make_pro(uid):
+    key = request.args.get('key')
+    if key != ADMIN_SECRET_KEY:
+        return "Unauthorized", 403
+
+    # 6 mahine ka time calculate kar rahe hain (180 days)
     expiry = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d %H:%M:%S')
+    
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("UPDATE users SET is_pro=1, expiry_date=? WHERE id=?", (expiry, uid))
     conn.commit()
     conn.close()
-    return redirect('/zrylo-admin')
+    
+    # Wapas admin panel par bhej do
+    return redirect(f'/zrylo-admin?key={ADMIN_SECRET_KEY}')
 
 @app.route('/api/activate-pro', methods=['POST'])
 def activate_pro():
