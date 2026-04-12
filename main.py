@@ -359,6 +359,27 @@ def activate_pro():
 # --- ADMIN CONFIGURATION ---
 ADMIN_SECRET_KEY = "ZRYLO786"  # Ye tera master password hai
 
+@app.route('/api/razorpay-webhook', methods=['POST'])
+def razorpay_webhook():
+    data = request.json
+    
+    # Razorpay signal check kar raha hai
+    if data.get('event') == 'payment.captured':
+        payment_entity = data['payload']['payment']['entity']
+        customer_email = payment_entity.get('email', '').lower()
+        
+        if customer_email:
+            expiry = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d %H:%M:%S')
+            conn = sqlite3.connect(DB_NAME)
+            c = conn.cursor()
+            # Database mein user ko PRO bana raha hai
+            c.execute("UPDATE users SET is_pro=1, expiry_date=? WHERE email=?", (expiry, customer_email))
+            conn.commit()
+            conn.close()
+            return jsonify({"status": "success"}), 200
+
+    return jsonify({"status": "ignored"}), 200
+
 @app.route('/zrylo-admin')
 def admin_panel():
     # Isse kholne ke liye browser mein dalo: /zrylo-admin?key=ZRYLO786
