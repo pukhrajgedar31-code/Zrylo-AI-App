@@ -5,6 +5,7 @@ import json
 import random
 from datetime import datetime, timedelta
 from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = "ZRYLO_ROYAL_SECRET_786" 
@@ -291,56 +292,67 @@ def index():
     </html>
     """, is_pro=is_pro)
 
-@@app.route('/auth', methods=['POST'])
+# --- 1. SIGNUP & LOGIN LOGIC ---
+@app.route('/auth', methods=['POST'])
 def auth():
-    # .strip() se aage-piche ki space khatam
-    # .lower() se sab kuch chote letters mein (bhai@gmail.com)
     email = request.form.get('email', '').strip().lower()
     password = request.form.get('password', '').strip()
     auth_type = request.form.get('type')
 
     if not email or not password:
-        return "Bhai, email aur password dono dalo! <a href='/'>Back</a>"
+        return "Bhai, details adhuri hain! <a href='/'>Back</a>"
 
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
     try:
         if auth_type == 'signup':
-            # Pehle check karo user pehle se hai toh nahi
             c.execute("SELECT * FROM users WHERE email=?", (email,))
             if c.fetchone():
                 conn.close()
-                return "Ye Email pehle se register hai! Login karo. <a href='/'>Back</a>"
+                return "Email pehle se hai! Login karo. <a href='/'>Back</a>"
             
-            # Naya user save karo
-            c.execute("INSERT INTO users (email, password, is_pro) VALUES (?, ?, 0)", (email, password))
+            # Password ko encrypt karke save kar rahe hain
+            hashed_pw = generate_password_hash(password)
+            c.execute("INSERT INTO users (email, password, is_pro) VALUES (?, ?, 0)", (email, hashed_pw))
             conn.commit()
             session['user'] = email
-            session.permanent = True # Isse user baar-baar logout nahi hoga
         else:
-            # LOGIN LOGIC: Ekdum saaf suthra match
-            c.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
+            # Login check with hashing
+            c.execute("SELECT * FROM users WHERE email=?", (email,))
             user = c.fetchone()
-            if user:
+            if user and check_password_hash(user[2], password):
                 session['user'] = email
-                session.permanent = True
             else:
                 conn.close()
-                return "Email ya Password galat hai bhai! <a href='/'>Back</a>"
-    except Exception as e:
-        conn.close()
-        return f"Database Error: {e} <a href='/'>Back</a>"
+                return "Galat email/password! <a href='/'>Back</a>"
         
-    conn.close()
-    return redirect(url_for('index'))
+        session.permanent = True
+        conn.close()
+        return redirect(url_for('index'))
+    except Exception as e:
+        return f"Error: {e}"
 
-@app.route('/logout')
-def logout():
-    session.pop('user', None)
-    return redirect(url_for('index'))
-
-@# --- ADMIN CONFIGURATION ---
+# --- 2. AUTOMATIC PRO ACTIVATION ---
+@app.route('/api/activate-pro', methods=['POST'])
+def activate_pro():
+    if 'user' not in session:
+        return jsonify({"status": "fail", "message": "Login first"}), 401
+    
+    # Yahan 180 days (6 months) ka logic hai
+    expiry = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d %H:%M:%S')
+    
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    try:
+        # User ko PRO banao aur expiry date set karo
+        c.execute("UPDATE users SET is_pro=1, expiry_date=? WHERE email=?", (expiry, session['user']))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success", "expiry": expiry})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+@ --- ADMIN CONFIGURATION ---
 ADMIN_SECRET_KEY = "ZRYLO786"  # Ye tera master password hai
 
 @app.route('/zrylo-admin')
