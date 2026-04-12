@@ -352,7 +352,7 @@ def activate_pro():
         return jsonify({"status": "success", "expiry": expiry})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-@ --- ADMIN CONFIGURATION ---
+# --- ADMIN CONFIGURATION ---
 ADMIN_SECRET_KEY = "ZRYLO786"  # Ye tera master password hai
 
 @app.route('/zrylo-admin')
@@ -442,18 +442,6 @@ def admin_make_pro(uid):
     
     # Wapas admin panel par bhej do
     return redirect(f'/zrylo-admin?key={ADMIN_SECRET_KEY}')
-
-@app.route('/api/activate-pro', methods=['POST'])
-def activate_pro():
-    if 'user' in session:
-        expiry = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d %H:%M:%S')
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute("UPDATE users SET is_pro=1, expiry_date=? WHERE email=?", (expiry, session['user']))
-        conn.commit()
-        conn.close()
-        return jsonify({"status": "success"})
-    return jsonify({"status": "fail"}), 401
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
