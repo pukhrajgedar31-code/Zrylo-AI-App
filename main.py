@@ -138,27 +138,29 @@ def index():
         </div>
 
         <div id="payModal" class="modal p-6">
-            <div class="max-w-md w-full royal-card p-12 rounded-[4rem] text-center border-[#D4AF37]">
-                <h3 class="gold-text text-4xl font-black mb-6 uppercase tracking-tighter italic">6-MONTH LICENSE</h3>
-                <div class="space-y-4 mb-10">
-                    <button onclick="window.open('https://rzp.io/rzp/v3ppXAXU', '_system')" class="w-full p-6 bg-black/60 border border-[#D4AF37] rounded-3xl flex justify-between items-center hover:bg-white/5">
-                        <div>
-                            <p class="text-[10px] text-zinc-500 uppercase font-bold mb-1">For India</p>
-                            <p class="text-3xl font-black gold-text">View Plan For India</p>
-                        </div>
-                    </button>
-                    <button onclick="window.open('https://rzp.io/rzp/0pNXjsv', '_system')" class="w-full p-6 bg-black/60 border border-zinc-800 rounded-3xl flex justify-between items-center hover:bg-white/5">
-                        <div>
-                            <p class="text-[10px] text-zinc-500 uppercase font-bold mb-1">For Global</p>
-                            <p class="text-3xl font-black gold-text">View Plan For Global</p>
-                        </div>
-                    </button>
+    <div class="max-w-md w-full royal-card p-12 rounded-[4rem] text-center border-[#D4AF37]">
+        <h3 class="gold-text text-4xl font-black mb-6 uppercase tracking-tighter italic">6-MONTH LICENSE</h3>
+        <div class="space-y-4 mb-10">
+            
+            <button onclick="pay('india')" class="w-full p-6 bg-black/60 border border-[#D4AF37] rounded-3xl flex justify-between items-center hover:bg-white/5 text-left">
+                <div>
+                    <p class="text-[10px] text-zinc-500 uppercase font-bold mb-1">For India</p>
+                    <p class="text-3xl font-black gold-text">View Plan For India</p>
                 </div>
-                <p class="text-zinc-500 text-[10px] mb-8 italic">Note: Access will be activated automatically after payment verification.</p>
-                <button onclick="document.getElementById('payModal').style.display='none'" class="text-zinc-700 text-[10px] font-black uppercase hover:text-white transition">Cancel</button>
-            </div>
-        </div>
+            </button>
 
+            <button onclick="pay('global')" class="w-full p-6 bg-black/60 border border-zinc-800 rounded-3xl flex justify-between items-center hover:bg-white/5 text-left">
+                <div>
+                    <p class="text-[10px] text-zinc-500 uppercase font-bold mb-1">For Global</p>
+                    <p class="text-3xl font-black gold-text">View Plan For Global</p>
+                </div>
+            </button>
+
+        </div>
+        <p class="text-zinc-500 text-[10px] mb-8 italic">Note: Access will be activated automatically after payment verification.</p>
+        <button onclick="document.getElementById('payModal').style.display='none'" class="text-zinc-700 text-[10px] font-black uppercase hover:text-white transition">Cancel</button>
+    </div>
+</div>
         <script>
             const isLoggedIn = {{ 'true' if session.get('user') else 'false' }};
             const isProUser = {{ 'true' if is_pro == 1 else 'false' }};
@@ -269,18 +271,28 @@ def index():
                 xhr.send(formData);
             }
 
-            async function pay(type) {
-                const url = type === 'india' ? 'https://rzp.io/l/your_link' : 'https://stripe.com/your_link';
-                window.open(url, '_blank');
-                setTimeout(async () => {
-                    const response = await fetch('/api/activate-pro', { method: 'POST' });
-                    const result = await response.json();
-                    if(result.status === 'success') {
-                        alert("SYSTEM VERIFIED: Your 6-Month Pro Access is now ACTIVE!");
-                        location.reload();
-                    }
-                }, 5000); 
+           async function pay(type) {
+    // 1. Link set karo (Tere purane links ke hisaab se)
+    const paymentUrl = type === 'india' ? 'https://rzp.io/rzp/v3ppXAXU' : 'https://rzp.io/rzp/0pNXjsv';
+    
+    // 2. Naya tab kholo payment ke liye
+    window.open(paymentUrl, '_blank');
+
+    // 3. 5 second ka wait aur fir auto-activation
+    setTimeout(async () => {
+        try {
+            const response = await fetch('/api/activate-pro', { method: 'POST' });
+            const result = await response.json();
+            
+            if(result.status === 'success') {
+                alert("SYSTEM VERIFIED: Your 6-Month Pro Access is now ACTIVE!");
+                location.reload(); // Refresh hote hi PRO show ho jayega
             }
+        } catch (error) {
+            console.error("Activation failed:", error);
+        }
+    }, 5000); 
+}
         </script>
         <footer class="w-full max-w-6xl mt-32 mb-12 px-4 border-t border-zinc-900 pt-12 text-center">
             <div class="flex flex-wrap justify-center gap-8 mb-8">
