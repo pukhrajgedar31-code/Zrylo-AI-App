@@ -168,9 +168,13 @@ def index():
             function checkAuth() { if(!isLoggedIn) { openAuth(); return false; } return true; }
             
             function handleDownload() {
-                if(!isProUser) { document.getElementById('payModal').style.display = 'flex'; } 
-                else { alert("Download Started in 4K Quality!"); }
-            }
+    if(!isProUser) { 
+        // Agar user PRO nahi hai, toh seedha payment modal kholo
+        document.getElementById('payModal').style.display = 'flex'; 
+    } else { 
+        alert("Download Started in 4K Quality!"); 
+    }
+}
 
             function getID(url) {
                 const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
