@@ -271,15 +271,15 @@ def index():
                 xhr.send(formData);
             }
 
-           async function pay(type) {
-    // 1. Link set karo (Tere purane links ke hisaab se)
-    const paymentUrl = type === 'india' ? 'https://rzp.io/rzp/v3ppXAXU' : 'https://rzp.io/rzp/0pNXjsv';
+   async function pay(type) {
+    // Tere links (India aur Global dono Razorpay ke hain)
+    const url = type === 'india' ? 'https://rzp.io/rzp/v3ppXAXU' : 'https://rzp.io/rzp/0pNXjsv';
     
-    // 2. Naya tab kholo payment ke liye
-    window.open(paymentUrl, '_blank');
+    // Payment tab kholna
+    window.open(url, '_blank');
 
-    // 3. 5 second ka wait aur fir auto-activation
-    
+    // User ko instruction dena
+    alert("Payment ke baad 1 minute wait karein taaki humara system verify kar sake, uske baad page Refresh karein.");
 }
         </script>
         <footer class="w-full max-w-6xl mt-32 mb-12 px-4 border-t border-zinc-900 pt-12 text-center">
