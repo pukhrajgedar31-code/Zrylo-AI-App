@@ -279,19 +279,7 @@ def index():
     window.open(paymentUrl, '_blank');
 
     // 3. 5 second ka wait aur fir auto-activation
-    setTimeout(async () => {
-        try {
-            const response = await fetch('/api/activate-pro', { method: 'POST' });
-            const result = await response.json();
-            
-            if(result.status === 'success') {
-                alert("SYSTEM VERIFIED: Your 6-Month Pro Access is now ACTIVE!");
-                location.reload(); // Refresh hote hi PRO show ho jayega
-            }
-        } catch (error) {
-            console.error("Activation failed:", error);
-        }
-    }, 5000); 
+    
 }
         </script>
         <footer class="w-full max-w-6xl mt-32 mb-12 px-4 border-t border-zinc-900 pt-12 text-center">
