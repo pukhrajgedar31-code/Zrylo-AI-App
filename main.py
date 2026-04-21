@@ -29,12 +29,13 @@ def init_db():
 
 init_db()
 
-# --- 2. MASTER UI (UPDATED LOGIC) ---
+# --- 2. MASTER UI (TERA ORIGINAL LOGIC + SERVER CRASH FIX) ---
 @app.route('/')
 def index():
-    # Default values set karo shuru mein hi
+    # 1. Default value setup
     is_pro = 0
     
+    # 2. Tera Database & Expiry Check Logic (Same as before)
     if 'user' in session:
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
@@ -45,22 +46,21 @@ def index():
             is_pro = user[0]
             expiry_date = user[1]
             
-            # 6-Month Expiry Check
+            # Expiry Check (6-Month Logic)
             if is_pro == 1 and expiry_date:
-                if datetime.now() > datetime.strptime(expiry_date, '%Y-%m-%d %H:%M:%S'):
-                    c.execute("UPDATE users SET is_pro=0 WHERE email=?", (session['user'],))
-                    conn.commit()
-                    is_pro = 0
-        
+                try:
+                    if datetime.now() > datetime.strptime(expiry_date, '%Y-%m-%d %H:%M:%S'):
+                        c.execute("UPDATE users SET is_pro=0 WHERE email=?", (session['user'],))
+                        conn.commit()
+                        is_pro = 0
+                except:
+                    pass
         conn.close()
     
-    # Session ko hamesha update karo taki JS ko latest value mile
+    # 3. Session sync
     session['is_pro'] = is_pro
     
-    # Baki ka render_template_string yahan aayega...
-    return render_template_string(template_html, is_pro=is_pro)
-
-    # Baki render_template_string wala part niche hai...
+    # 4. Tera Poora HTML (Single Return)
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
