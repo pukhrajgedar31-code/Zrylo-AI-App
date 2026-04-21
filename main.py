@@ -11,7 +11,7 @@ app = Flask(__name__)
 app.secret_key = "ZRYLO_ROYAL_SECRET_786" 
 
 # --- 1. ENTERPRISE CONFIG & DATABASE SETUP ---
-API_KEY = "AIzaSyCSqncogp8wquQ1tc5DF8CD4BKZvWvv_sk" 
+API_KEY = "your api key" 
 DB_NAME = "zrylo_enterprise.db"
 
 def init_db():
@@ -29,7 +29,7 @@ def init_db():
 
 init_db()
 
-# --- 1. MASTER UI (FINAL STABLE VERSION) ---
+# --- 2. MASTER UI ---
 @app.route('/')
 def index():
     is_pro = 0
@@ -40,18 +40,14 @@ def index():
         user = c.fetchone()
         if user:
             is_pro = user[0]
-            expiry_date = user[1]
-            # Expiry Check logic
-            if is_pro == 1 and expiry_date:
-                if datetime.now() > datetime.strptime(expiry_date, '%Y-%m-%d %H:%M:%S'):
+            # 6-Month Expiry Auto-Check
+            if is_pro == 1 and user[1]:
+                if datetime.now() > datetime.strptime(user[1], '%Y-%m-%d %H:%M:%S'):
                     c.execute("UPDATE users SET is_pro=0 WHERE email=?", (session['user'],))
                     conn.commit()
                     is_pro = 0
         conn.close()
-    
-    session['is_pro'] = is_pro
 
-    # POORA HTML YAHIN HAI - ISME KUCH MISSING NAHI HAI
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
@@ -59,67 +55,130 @@ def index():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Zrylo-AI | Enterprise Master Suite</title>
+
+        <link rel="icon" type="image/png" href="https://i.postimg.cc/DZ02jdTY/Untitled-design-2026-04-08T180617-067.png">
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            body { background-color: #050505; color: #f0f0f0; font-family: sans-serif; }
-            .royal-card { background: linear-gradient(145deg, #013220 0%, #050505 100%); border: 1px solid #D4AF37; }
-            .gold-text { color: #D4AF37; }
-            .btn-premium { background: linear-gradient(145deg, #D4AF37, #AA8A2E); color: black; font-weight: 900; }
-            .clip-card { background: rgba(255,255,255,0.02); border: 1px solid #333; border-radius: 40px; overflow: hidden; }
+            body { background-color: #050505; color: #f0f0f0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+            .royal-card { background: linear-gradient(145deg, #013220 0%, #050505 100%); border: 1px solid #D4AF37; box-shadow: 0 0 60px rgba(212, 175, 55, 0.2); }
+            .gold-text { color: #D4AF37; text-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
+            .btn-premium { background: linear-gradient(145deg, #D4AF37, #AA8A2E); color: black; font-weight: 900; cursor: pointer; transition: 0.4s; border: none; }
+            .btn-premium:hover { transform: scale(1.02); box-shadow: 0 0 30px rgba(212, 175, 55, 0.5); }
+            .clip-card { background: rgba(255,255,255,0.02); border: 1px solid #333; border-radius: 40px; overflow: hidden; position: relative; transition: 0.3s; }
             .vertical-container { width: 100%; padding-top: 177.78%; position: relative; background: #000; overflow: hidden; }
             .speaker-video { position: absolute; top: 0; left: -100%; width: 300%; height: 100%; animation: activeTrack 8s infinite steps(1); pointer-events: none; }
             @keyframes activeTrack { 0% { transform: translateX(12.5%); } 50% { transform: translateX(-12.5%); } 100% { transform: translateX(12.5%); } }
-            .audio-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; cursor: pointer; }
-            .modal { background: rgba(0,0,0,0.98); display: none; position: fixed; inset: 0; align-items: center; justify-content: center; z-index: 1000; }
+            .audio-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; cursor: pointer; backdrop-filter: blur(8px); transition: 0.3s; }
+            .unmute-badge { background: #D4AF37; color: black; padding: 14px 28px; border-radius: 50px; font-weight: 900; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+            .modal { background: rgba(0,0,0,0.98); display: none; position: fixed; inset: 0; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(10px); }
+            .auth-input { width: 100%; padding: 1.25rem; background: rgba(0,0,0,0.6); border: 1px solid #333; border-radius: 1.5rem; color: white; outline: none; transition: 0.3s; }
         </style>
     </head>
-    <body class="p-6 md:p-12">
-        <div class="max-w-6xl mx-auto flex justify-between items-center mb-10">
-            <div class="gold-text font-black tracking-widest text-xl italic">ZRYLO AI</div>
-            <div id="profile">
+    <body class="p-6 md:p-12 flex flex-col items-center">
+        <div class="w-full max-w-6xl flex justify-between items-center mb-10 px-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-[#D4AF37] flex items-center justify-center text-black font-black">Z</div>
+                <span class="gold-text font-black tracking-widest text-xs uppercase italic">Zrylo AI</span>
+            </div>
+            <div id="profileSection">
                 {% if session.get('user') %}
-                    <span class="text-xs uppercase">{{ session['user'] }} {% if is_pro == 1 %}(PRO){% endif %}</span>
-                    <a href="/logout" class="ml-4 text-red-500 font-bold">Logout</a>
+                    <div class="flex items-center gap-6">
+                        <span class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{{ session['user'] }} {% if is_pro == 1 %}(PRO){% endif %}</span>
+                        <a href="/logout" class="text-[#D4AF37] text-[10px] font-black uppercase border border-[#D4AF37]/30 px-5 py-2 rounded-full">Logout</a>
+                    </div>
                 {% else %}
-                    <button onclick="openAuth()" class="border px-4 py-2 rounded-full">Login</button>
+                    <button onclick="openAuth()" class="text-white text-[10px] font-black uppercase border border-zinc-800 px-6 py-2 rounded-full">Login / Signup</button>
                 {% endif %}
             </div>
         </div>
 
         <div class="text-center mb-16">
-            <h1 class="text-7xl md:text-8xl font-black gold-text italic">ZRYLO-AI</h1>
-            <p class="text-zinc-500 uppercase tracking-widest mt-2">Enterprise Speaker Tracking</p>
+            <h1 class="text-7xl md:text-9xl font-black gold-text tracking-tighter uppercase italic">Zrylo-AI</h1>
+            <p class="text-zinc-600 text-[10px] tracking-[0.5em] font-bold mt-4 uppercase">Unlimited Enterprise Speaker Tracking</p>
         </div>
 
-        <div class="max-w-4xl mx-auto royal-card p-10 rounded-[3rem]">
-            <input type="text" id="vUrl" placeholder="Paste YouTube Link..." class="w-full p-6 bg-black/50 border border-zinc-800 rounded-2xl text-white mb-6">
-            <button onclick="runZrylo()" id="mainBtn" class="w-full py-6 btn-premium rounded-2xl text-xl uppercase italic">Analyze & Track Speaker</button>
+        <div class="w-full max-w-6xl royal-card p-10 md:p-16 rounded-[4rem]">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+                <div class="space-y-4">
+                    <label class="gold-text text-[10px] font-black uppercase tracking-widest ml-4 italic">Source URL</label>
+                    <input type="text" id="vUrl" onfocus="checkAuth()" placeholder="Paste YouTube Link..." class="w-full p-7 bg-black/40 border border-zinc-800 rounded-[2rem] text-white outline-none focus:border-[#D4AF37]">
+                </div>
+                <div class="space-y-4">
+                    <label class="gold-text text-[10px] font-black uppercase tracking-widest ml-4 italic">Enterprise 1GB Upload</label>
+                    <div onclick="checkAuth()" class="border-2 border-dashed border-zinc-800 rounded-[2rem] p-6 text-center relative hover:bg-white/5 transition cursor-pointer">
+                        <input type="file" id="videoFile" class="absolute inset-0 opacity-0 cursor-pointer" onchange="uploadVideo()">
+                        <span class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">DRAG & DROP VIDEO</span>
+                    </div>
+                </div>
+            </div>
 
-            <div id="resultArea" class="hidden mt-16 pt-10 border-t border-zinc-800">
-                <h2 class="gold-text text-center text-xl font-bold mb-10 uppercase italic">AI Character Sync Feed</h2>
-                <div id="clipsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-8"></div>
+            <button onclick="runZrylo()" id="mainBtn" class="w-full py-9 rounded-[2.5rem] btn-premium text-3xl uppercase tracking-tighter shadow-2xl">
+                Analyze & Track Active Speaker
+            </button>
+
+            <div id="resultArea" class="hidden mt-24 border-t border-zinc-800 pt-20">
+                <h2 class="gold-text text-center text-2xl font-black mb-16 uppercase tracking-widest italic">AI Character Sync Feed</h2>
+                <div id="clipsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10"></div>
             </div>
         </div>
 
-        <div id="authModal" class="modal">
-            <div class="max-w-sm w-full royal-card p-8 rounded-3xl text-center">
-                <h2 class="gold-text text-2xl font-black mb-6 italic">ACCESS ZRYLO</h2>
-                <form action="/auth" method="POST" class="space-y-4">
-                    <input type="email" name="email" placeholder="Email" required class="w-full p-4 bg-black border border-zinc-800 rounded-xl">
-                    <input type="password" name="password" placeholder="Password" required class="w-full p-4 bg-black border border-zinc-800 rounded-xl">
-                    <button type="submit" name="type" value="login" class="w-full py-3 btn-premium rounded-xl uppercase">Login</button>
-                    <button type="submit" name="type" value="signup" class="w-full py-3 border border-zinc-800 rounded-xl text-white mt-2">Signup</button>
+        <div id="authModal" class="modal p-6">
+            <div class="max-w-md w-full royal-card p-12 rounded-[3.5rem] text-center relative">
+                <button onclick="closeAuth()" class="absolute top-8 right-8 text-zinc-500 hover:text-white">✕</button>
+                <h3 class="gold-text text-4xl font-black mb-2 uppercase italic tracking-tighter">Zrylo Access</h3>
+                <form action="/auth" method="POST" class="space-y-5">
+                    <input type="email" name="email" placeholder="EMAIL ADDRESS" required class="auth-input">
+                    <input type="password" name="password" placeholder="PASSWORD" required class="auth-input">
+                    <div class="grid grid-cols-2 gap-4 pt-4">
+                        <button type="submit" name="type" value="login" class="py-4 btn-premium rounded-2xl text-[11px] font-black uppercase">Login</button>
+                        <button type="submit" name="type" value="signup" class="py-4 border border-zinc-700 text-white rounded-2xl text-[11px] font-black uppercase">Signup</button>
+                    </div>
                 </form>
-                <button onclick="closeAuth()" class="mt-4 text-zinc-500">Close</button>
             </div>
         </div>
 
+        <div id="payModal" class="modal p-6">
+    <div class="max-w-md w-full royal-card p-12 rounded-[4rem] text-center border-[#D4AF37]">
+        <h3 class="gold-text text-4xl font-black mb-6 uppercase tracking-tighter italic">6-MONTH LICENSE</h3>
+        <div class="space-y-4 mb-10">
+            
+            <button onclick="pay('india')" class="w-full p-6 bg-black/60 border border-[#D4AF37] rounded-3xl flex justify-between items-center hover:bg-white/5 text-left">
+                <div>
+                    <p class="text-[10px] text-zinc-500 uppercase font-bold mb-1">For India</p>
+                    <p class="text-3xl font-black gold-text">View Plan For India</p>
+                </div>
+            </button>
+
+            <button onclick="pay('global')" class="w-full p-6 bg-black/60 border border-zinc-800 rounded-3xl flex justify-between items-center hover:bg-white/5 text-left">
+                <div>
+                    <p class="text-[10px] text-zinc-500 uppercase font-bold mb-1">For Global</p>
+                    <p class="text-3xl font-black gold-text">View Plan For Global</p>
+                </div>
+            </button>
+
+        </div>
+        <p class="text-zinc-500 text-[10px] mb-8 italic">Note: Access will be activated automatically after payment verification.</p>
+        <button onclick="document.getElementById('payModal').style.display='none'" class="text-zinc-700 text-[10px] font-black uppercase hover:text-white transition">Cancel</button>
+    </div>
+</div>
         <script>
             const isLoggedIn = {{ 'true' if session.get('user') else 'false' }};
-            let isPro = {{ '1' if is_pro == 1 else '0' }};
+            const isProUser = {{ 'true' if is_pro == 1 else 'false' }};
 
-            function openAuth() { document.getElementById('authModal').style.display='flex'; }
-            function closeAuth() { document.getElementById('authModal').style.display='none'; }
+            function openAuth() { document.getElementById('authModal').style.display = 'flex'; }
+            function closeAuth() { document.getElementById('authModal').style.display = 'none'; }
+            function checkAuth() { if(!isLoggedIn) { openAuth(); return false; } return true; }
+            
+          async function handleDownload() {
+    const res = await fetch('/api/check-pro');
+    const data = await res.json();
+
+    if (!data.is_pro) {
+        document.getElementById('payModal').style.display = 'flex';
+    } else {
+        alert("Download Started in 4K Quality!");
+    }
+}
 
             function getID(url) {
                 const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -127,61 +186,130 @@ def index():
                 return (match && match[2].length == 11) ? match[2] : null;
             }
 
-            function playOne(oId, ifId) {
-                document.getElementById(oId).style.display = 'none';
-                let ifr = document.getElementById(ifId);
-                ifr.src = ifr.src.replace("mute=1", "mute=0");
+            function playOne(overlayId, iframeId) {
+                document.querySelectorAll('.audio-overlay').forEach(ov => ov.style.display = 'flex');
+                document.querySelectorAll('iframe').forEach(ifr => {
+                    let src = ifr.src;
+                    if (src.includes("mute=0")) ifr.src = src.replace("mute=0", "mute=1");
+                });
+                document.getElementById(iframeId).src = document.getElementById(iframeId).src.replace("mute=1", "mute=0");
+                document.getElementById(overlayId).style.display = "none";
             }
 
             async function runZrylo() {
-                if(!isLoggedIn) { openAuth(); return; }
+                if(!checkAuth()) return;
                 const url = document.getElementById('vUrl').value;
                 const vidId = getID(url);
-                if(!vidId) { alert("Sahi URL dalo!"); return; }
-
                 const btn = document.getElementById('mainBtn');
-                btn.innerText = "AI TRACKING...";
+                if(!vidId) { alert("Sahi YouTube Link dalo bhai!"); return; }
+                
+                btn.innerText = "AI TRACKING ACTIVE SPEAKERS...";
                 btn.disabled = true;
-
+                
                 try {
-                    const res = await fetch('/api/analyze', {
+                    const response = await fetch('/api/analyze', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ url: url })
                     });
-                    const data = await res.json();
+                    const data = await response.json();
                     
-                    if(data.status === "success") {
-                        document.getElementById('resultArea').classList.remove('hidden');
-                        const grid = document.getElementById('clipsGrid');
-                        grid.innerHTML = "";
-
-                        data.segments.forEach((seg, i) => {
-                            grid.insertAdjacentHTML('beforeend', `
-                                <div class="clip-card p-2">
-                                    <div id="o_${i}" onclick="playOne('o_${i}', 'v_${i}')" class="audio-overlay">
-                                        <div class="bg-[#D4AF37] text-black px-4 py-2 rounded-full font-bold text-[10px]">UNMUTE</div>
-                                    </div>
-                                    <div class="vertical-container rounded-[30px]">
-                                        <iframe id="v_${i}" class="speaker-video" 
-                                            src="https://www.youtube.com/embed/` + vidId + `?start=` + seg.start + `&autoplay=1&mute=1&controls=0" 
-                                            frameborder="0"></iframe>
-                                    </div>
-                                    <div class="p-6 text-center">
-                                        <p class="text-[10px] text-zinc-500 italic mb-4">` + seg.reason + `</p>
-                                        <button onclick="alert('Download Started!')" class="w-full py-3 bg-[#D4AF37] text-black rounded-xl font-bold uppercase text-[10px]">Download Clip</button>
-                                    </div>
+                    document.getElementById('resultArea').classList.remove('hidden');
+                    const grid = document.getElementById('clipsGrid');
+                    grid.innerHTML = "";
+                    
+                    data.segments.forEach((seg, i) => {
+                        const ifId = `v_${i}`; const oId = `o_${i}`;
+                        grid.innerHTML += `
+                            <div class="clip-card p-2">
+                                <div id="${oId}" onclick="playOne('${oId}', '${ifId}')" class="audio-overlay">
+                                    <div class="unmute-badge">🔊 UNMUTE & TRACK</div>
                                 </div>
-                            `);
-                        });
-                    }
-                } catch(e) { alert("Error!"); }
-                finally { btn.innerText = "Analyze & Track Speaker"; btn.disabled = false; }
+                                <div class="vertical-container rounded-[35px]">
+                                    <iframe id="${ifId}" class="speaker-video" src="https://www.youtube.com/embed/${vidId}?start=${seg.start}&autoplay=1&mute=1&controls=0" frameborder="0"></iframe>
+                                </div>
+                                <div class="p-8">
+                                    <p class="text-[10px] text-zinc-400 mb-8 italic border-l-2 border-[#D4AF37] pl-4">${seg.reason}</p>
+                                    <button onclick="handleDownload()" class="w-full py-4 bg-[#D4AF37] text-black rounded-xl text-[10px] font-black uppercase">Download Segment</button>
+                                </div>
+                            </div>`;
+                    });
+                } catch (e) { alert("API Error!"); }
+                btn.innerText = "ANALYZE & TRACK ACTIVE SPEAKER";
+                btn.disabled = false;
             }
+
+            function uploadVideo() {
+                const fileInput = document.getElementById('videoFile');
+                const grid = document.getElementById('clipsGrid');
+                if (fileInput.files.length === 0) return alert("Please select a file!");
+
+                const formData = new FormData();
+                formData.append('video_file', fileInput.files[0]);
+
+                grid.innerHTML = `
+                    <div class="col-span-full p-12 text-center royal-card rounded-[2.5rem]">
+                        <div id="statusText" class="gold-text text-2xl font-black mb-6 uppercase italic">Uploading Media...</div>
+                        <div class="w-full bg-zinc-900 h-4 rounded-full overflow-hidden border border-zinc-800">
+                            <div id="progressBar" class="bg-[#D4AF37] h-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <p id="percentText" class="text-[#D4AF37] mt-4 font-bold">0%</p>
+                    </div>`;
+
+                const xhr = new XMLHttpRequest();
+                xhr.upload.onprogress = function(e) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    document.getElementById('progressBar').style.width = percent + '%';
+                    document.getElementById('percentText').innerText = percent + '%';
+                };
+
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        document.getElementById('statusText').innerText = "UPLOAD DONE! STARTING CLIPPING...";
+                        setTimeout(() => { runZrylo(); }, 1000); 
+                    } else { alert("Upload failed!"); }
+                };
+                xhr.open('POST', '/api/upload');
+                xhr.send(formData);
+            }
+
+   async function pay(type) {
+    const url = type === 'india' 
+        ? 'https://rzp.io/rzp/v3ppXAXU' 
+        : 'https://rzp.io/rzp/0pNXjsv';
+
+    const userEmail = "{{ session.get('user') }}";
+window.open(url + "?email=" + userEmail, '_blank');
+
+    alert("After payment wait 30-60 seconds...");
+
+    // Auto check every 10 sec
+    let interval = setInterval(async () => {
+        const res = await fetch('/api/check-pro');
+        const data = await res.json();
+
+        if (data.is_pro) {
+            clearInterval(interval);
+            alert("🎉 PRO Activated!");
+            location.reload();
+        }
+    }, 10000);
+}
         </script>
+        <footer class="w-full max-w-6xl mt-32 mb-12 px-4 border-t border-zinc-900 pt-12 text-center">
+            <div class="flex flex-wrap justify-center gap-8 mb-8">
+                <a href="/legal/about" class="text-[10px] text-zinc-600 hover:text-[#D4AF37] uppercase font-black tracking-widest">About Us</a>
+                <a href="/legal/privacy" class="text-[10px] text-zinc-600 hover:text-[#D4AF37] uppercase font-black tracking-widest">Privacy Policy</a>
+                <a href="/legal/terms" class="text-[10px] text-zinc-600 hover:text-[#D4AF37] uppercase font-black tracking-widest">Terms</a>
+                <a href="/legal/help" class="text-[10px] text-zinc-600 hover:text-[#D4AF37] uppercase font-black tracking-widest">Help Center</a>
+                <a href="/legal/contact" class="text-[10px] text-[#D4AF37] border border-[#D4AF37]/20 px-4 py-1 rounded-full uppercase font-black">Support</a>
+            </div>
+            <p class="text-[8px] text-zinc-800 font-bold uppercase tracking-[0.5em]">© 2026 ZRYLO AI • ENTERPRISE VIRAL SUITE</p>
+        </footer>
     </body>
     </html>
     """, is_pro=is_pro)
+
 # --- 1. SIGNUP & LOGIN LOGIC ---
 @app.route('/auth', methods=['POST'])
 def auth():
@@ -223,50 +351,71 @@ def auth():
     except Exception as e:
         return f"Error: {e}"
 
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('index'))
+
 # --- 2. AUTOMATIC PRO ACTIVATION ---
 @app.route('/api/activate-pro', methods=['POST'])
 def activate_pro():
     if 'user' not in session:
         return jsonify({"status": "fail", "message": "Login first"}), 401
     
-    # 180 days logic
+    # Yahan 180 days (6 months) ka logic hai
     expiry = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d %H:%M:%S')
     
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     try:
+        # User ko PRO banao aur expiry date set karo
         c.execute("UPDATE users SET is_pro=1, expiry_date=? WHERE email=?", (expiry, session['user']))
         conn.commit()
         conn.close()
-        
-        # IMMEDIATELY UPDATE SESSION
-        session['is_pro'] = 1 
         return jsonify({"status": "success", "expiry": expiry})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 # --- ADMIN CONFIGURATION ---
 ADMIN_SECRET_KEY = "ZRYLO786"  # Ye tera master password hai
 
+import hmac
+import hashlib
+
+RAZORPAY_WEBHOOK_SECRET = "PUT_YOUR_SECRET_HERE"
+
 @app.route('/api/razorpay-webhook', methods=['POST'])
 def razorpay_webhook():
-    data = request.json
-    
-    # Razorpay signal check kar raha hai
-    if data.get('event') == 'payment.captured':
-        payment_entity = data['payload']['payment']['entity']
-        customer_email = payment_entity.get('email', '').lower()
-        
-        if customer_email:
-            expiry = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d %H:%M:%S')
-            conn = sqlite3.connect(DB_NAME)
-            c = conn.cursor()
-            # Database mein user ko PRO bana raha hai
-            c.execute("UPDATE users SET is_pro=1, expiry_date=? WHERE email=?", (expiry, customer_email))
-            conn.commit()
-            conn.close()
-            return jsonify({"status": "success"}), 200
+    payload = request.data
+    received_sig = request.headers.get('X-Razorpay-Signature')
 
-    return jsonify({"status": "ignored"}), 200
+    generated_sig = hmac.new(
+        bytes(RAZORPAY_WEBHOOK_SECRET, 'utf-8'),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+
+    # Security check
+    if not hmac.compare_digest(received_sig, generated_sig):
+        return jsonify({"status": "invalid signature"}), 400
+
+    data = request.json
+
+    if data.get('event') == 'payment.captured':
+        payment = data['payload']['payment']['entity']
+        email = payment.get('email')
+
+        if not email:
+            return jsonify({"status": "no email"}), 200
+
+        expiry = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d %H:%M:%S')
+
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("UPDATE users SET is_pro=1, expiry_date=? WHERE email=?", (expiry, email.lower()))
+        conn.commit()
+        conn.close()
+
+    return jsonify({"status": "success"})
 
 @app.route('/zrylo-admin')
 def admin_panel():
@@ -408,9 +557,22 @@ def handle_upload():
     if 'video_file' not in request.files: return jsonify({"status": "error"}), 400
     file = request.files['video_file']
     if not os.path.exists('uploads'): os.makedirs('uploads')
-    save_path = os.path.join('uploads', file.filename)
+    filename = secure_filename(file.filename)
+save_path = os.path.join('uploads', filename)
     file.save(save_path)
     return jsonify({"status": "success", "file_path": save_path})
+@app.route('/api/check-pro')
+def check_pro():
+    if 'user' not in session:
+        return jsonify({"is_pro": False})
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT is_pro FROM users WHERE email=?", (session['user'],))
+    user = c.fetchone()
+    conn.close()
+
+    return jsonify({"is_pro": user[0] == 1 if user else False})
 
 import os
 if __name__ == "__main__":
