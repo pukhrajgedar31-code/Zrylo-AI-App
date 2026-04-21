@@ -218,7 +218,7 @@ function handleDownload() {
                 document.getElementById(overlayId).style.display = "none";
             }
 
-            async function runZrylo() {
+           async function runZrylo() {
     if(!checkAuth()) return;
     
     const url = document.getElementById('vUrl').value;
@@ -241,18 +241,23 @@ function handleDownload() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ url: url })
         });
-        const data = await response.json();
         
-        if(data.status === "success") {
-            // Logic wahi hai: Pehle area dikhao, fir grid saaf karo
+        const data = await response.json();
+        console.log("API Response:", data); // Debugging ke liye
+
+        if(data.status === "success" && data.segments) {
+            // 1. Pehle hidden area ko show karo
             resultArea.classList.remove('hidden');
+            
+            // 2. Grid ko saaf karo purane kachre se
             grid.innerHTML = ""; 
 
-            // Tere original logic ka loop
+            // 3. 10 Clips wala loop (Tera Original Logic)
             data.segments.forEach((seg, i) => {
                 const ifId = `v_${i}`; 
                 const oId = `o_${i}`;
                 
+                // Niche wala template tere royal design ke hisaab se hai
                 grid.insertAdjacentHTML('beforeend', `
                     <div class="clip-card p-2">
                         <div id="${oId}" onclick="playOne('${oId}', '${ifId}')" class="audio-overlay">
@@ -260,19 +265,30 @@ function handleDownload() {
                         </div>
                         <div class="vertical-container rounded-[35px]">
                             <iframe id="${ifId}" class="speaker-video" 
-                                src="https://www.youtube.com/embed/${vidId}?start=${seg.start}&autoplay=1&mute=1&controls=0" 
-                                frameborder="0"></iframe>
+                                src="https://www.youtube.com/embed/${vidId}?start=${seg.start}&autoplay=1&mute=1&controls=0&modestbranding=1" 
+                                frameborder="0" allow="autoplay"></iframe>
                         </div>
                         <div class="p-8">
-                            <p class="text-[10px] text-zinc-400 mb-8 italic border-l-2 border-[#D4AF37] pl-4">${seg.reason}</p>
-                            <button onclick="handleDownload()" class="w-full py-4 bg-[#D4AF37] text-black rounded-xl text-[10px] font-black uppercase">Download Segment</button>
+                            <p class="text-[10px] text-zinc-400 mb-8 italic border-l-2 border-[#D4AF37] pl-4">
+                                ${seg.reason} #${i+1}
+                            </p>
+                            <button onclick="handleDownload()" class="w-full py-4 bg-[#D4AF37] text-black rounded-xl text-[10px] font-black uppercase hover:opacity-80 transition">
+                                Download Segment
+                            </button>
                         </div>
                     </div>
                 `);
             });
+            
+            // Clips load hone ke baad smooth scroll
+            resultArea.scrollIntoView({ behavior: 'smooth' });
+
+        } else {
+            alert("Clips generate nahi ho payi, check API!");
         }
     } catch (e) { 
-        alert("API Error!"); 
+        console.error(e);
+        alert("Server connection error!"); 
     } finally {
         btn.innerText = "ANALYZE & TRACK ACTIVE SPEAKER";
         btn.disabled = false;
