@@ -29,7 +29,7 @@ def init_db():
 
 init_db()
 
-# --- 2. MASTER UI ---
+# --- 2. MASTER UI (UPDATED LOGIC) ---
 @app.route('/')
 def index():
     is_pro = 0
@@ -40,14 +40,20 @@ def index():
         user = c.fetchone()
         if user:
             is_pro = user[0]
-            # 6-Month Expiry Auto-Check
+            # 6-Month Expiry Auto-Check logic
             if is_pro == 1 and user[1]:
                 if datetime.now() > datetime.strptime(user[1], '%Y-%m-%d %H:%M:%S'):
                     c.execute("UPDATE users SET is_pro=0 WHERE email=?", (session['user'],))
                     conn.commit()
                     is_pro = 0
+            
+            # SESSION MEIN SAVE KARO TAKI REFRESH PAR ISSUE NA AAYE
+            session['is_pro'] = is_pro 
         conn.close()
+    else:
+        session['is_pro'] = 0
 
+    # Baki render_template_string wala part niche hai...
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="en">
@@ -169,12 +175,23 @@ def index():
             function closeAuth() { document.getElementById('authModal').style.display = 'none'; }
             function checkAuth() { if(!isLoggedIn) { openAuth(); return false; } return true; }
             
-            function handleDownload() {
-    if(!isProUser) { 
-        // Agar user PRO nahi hai, toh seedha payment modal kholo
-        document.getElementById('payModal').style.display = 'flex'; 
-    } else { 
-        alert("Download Started in 4K Quality!"); 
+            // --- SCRIPT SECTION FIX ---
+const isLoggedIn = {{ 'true' if session.get('user') else 'false' }};
+// Ab hum session se direct value uthayenge
+let isProUser = {{ 'true' if session.get('is_pro') == 1 else 'false' }};
+
+function handleDownload() {
+    if (!isLoggedIn) {
+        openAuth();
+        return;
+    }
+    
+    // Final check before download
+    if (isProUser === true) {
+        alert("Zrylo AI: Download Started in 4K Quality!");
+        // Yahan tera asli download trigger code aayega
+    } else {
+        document.getElementById('payModal').style.display = 'flex';
     }
 }
 
@@ -343,16 +360,18 @@ def activate_pro():
     if 'user' not in session:
         return jsonify({"status": "fail", "message": "Login first"}), 401
     
-    # Yahan 180 days (6 months) ka logic hai
+    # 180 days logic
     expiry = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d %H:%M:%S')
     
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     try:
-        # User ko PRO banao aur expiry date set karo
         c.execute("UPDATE users SET is_pro=1, expiry_date=? WHERE email=?", (expiry, session['user']))
         conn.commit()
         conn.close()
+        
+        # IMMEDIATELY UPDATE SESSION
+        session['is_pro'] = 1 
         return jsonify({"status": "success", "expiry": expiry})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
