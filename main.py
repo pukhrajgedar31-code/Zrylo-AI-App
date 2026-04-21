@@ -32,26 +32,33 @@ init_db()
 # --- 2. MASTER UI (UPDATED LOGIC) ---
 @app.route('/')
 def index():
+    # Default values set karo shuru mein hi
     is_pro = 0
+    
     if 'user' in session:
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         c.execute("SELECT is_pro, expiry_date FROM users WHERE email=?", (session['user'],))
         user = c.fetchone()
+        
         if user:
             is_pro = user[0]
-            # 6-Month Expiry Auto-Check logic
-            if is_pro == 1 and user[1]:
-                if datetime.now() > datetime.strptime(user[1], '%Y-%m-%d %H:%M:%S'):
+            expiry_date = user[1]
+            
+            # 6-Month Expiry Check
+            if is_pro == 1 and expiry_date:
+                if datetime.now() > datetime.strptime(expiry_date, '%Y-%m-%d %H:%M:%S'):
                     c.execute("UPDATE users SET is_pro=0 WHERE email=?", (session['user'],))
                     conn.commit()
                     is_pro = 0
-            
-            # SESSION MEIN SAVE KARO TAKI REFRESH PAR ISSUE NA AAYE
-            session['is_pro'] = is_pro 
+        
         conn.close()
-    else:
-        session['is_pro'] = 0
+    
+    # Session ko hamesha update karo taki JS ko latest value mile
+    session['is_pro'] = is_pro
+    
+    # Baki ka render_template_string yahan aayega...
+    return render_template_string(template_html, is_pro=is_pro)
 
     # Baki render_template_string wala part niche hai...
     return render_template_string("""
@@ -212,47 +219,65 @@ function handleDownload() {
             }
 
             async function runZrylo() {
-                if(!checkAuth()) return;
-                const url = document.getElementById('vUrl').value;
-                const vidId = getID(url);
-                const btn = document.getElementById('mainBtn');
-                if(!vidId) { alert("Sahi YouTube Link dalo bhai!"); return; }
+    if(!checkAuth()) return;
+    
+    const url = document.getElementById('vUrl').value;
+    const vidId = getID(url);
+    const btn = document.getElementById('mainBtn');
+    const grid = document.getElementById('clipsGrid');
+    const resultArea = document.getElementById('resultArea');
+
+    if(!vidId) { 
+        alert("Sahi YouTube Link dalo bhai!"); 
+        return; 
+    }
+    
+    btn.innerText = "AI TRACKING ACTIVE SPEAKERS...";
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ url: url })
+        });
+        const data = await response.json();
+        
+        if(data.status === "success") {
+            // Logic wahi hai: Pehle area dikhao, fir grid saaf karo
+            resultArea.classList.remove('hidden');
+            grid.innerHTML = ""; 
+
+            // Tere original logic ka loop
+            data.segments.forEach((seg, i) => {
+                const ifId = `v_${i}`; 
+                const oId = `o_${i}`;
                 
-                btn.innerText = "AI TRACKING ACTIVE SPEAKERS...";
-                btn.disabled = true;
-                
-                try {
-                    const response = await fetch('/api/analyze', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ url: url })
-                    });
-                    const data = await response.json();
-                    
-                    document.getElementById('resultArea').classList.remove('hidden');
-                    const grid = document.getElementById('clipsGrid');
-                    grid.innerHTML = "";
-                    
-                    data.segments.forEach((seg, i) => {
-                        const ifId = `v_${i}`; const oId = `o_${i}`;
-                        grid.innerHTML += `
-                            <div class="clip-card p-2">
-                                <div id="${oId}" onclick="playOne('${oId}', '${ifId}')" class="audio-overlay">
-                                    <div class="unmute-badge">🔊 UNMUTE & TRACK</div>
-                                </div>
-                                <div class="vertical-container rounded-[35px]">
-                                    <iframe id="${ifId}" class="speaker-video" src="https://www.youtube.com/embed/${vidId}?start=${seg.start}&autoplay=1&mute=1&controls=0" frameborder="0"></iframe>
-                                </div>
-                                <div class="p-8">
-                                    <p class="text-[10px] text-zinc-400 mb-8 italic border-l-2 border-[#D4AF37] pl-4">${seg.reason}</p>
-                                    <button onclick="handleDownload()" class="w-full py-4 bg-[#D4AF37] text-black rounded-xl text-[10px] font-black uppercase">Download Segment</button>
-                                </div>
-                            </div>`;
-                    });
-                } catch (e) { alert("API Error!"); }
-                btn.innerText = "ANALYZE & TRACK ACTIVE SPEAKER";
-                btn.disabled = false;
-            }
+                grid.insertAdjacentHTML('beforeend', `
+                    <div class="clip-card p-2">
+                        <div id="${oId}" onclick="playOne('${oId}', '${ifId}')" class="audio-overlay">
+                            <div class="unmute-badge">🔊 UNMUTE & TRACK</div>
+                        </div>
+                        <div class="vertical-container rounded-[35px]">
+                            <iframe id="${ifId}" class="speaker-video" 
+                                src="https://www.youtube.com/embed/${vidId}?start=${seg.start}&autoplay=1&mute=1&controls=0" 
+                                frameborder="0"></iframe>
+                        </div>
+                        <div class="p-8">
+                            <p class="text-[10px] text-zinc-400 mb-8 italic border-l-2 border-[#D4AF37] pl-4">${seg.reason}</p>
+                            <button onclick="handleDownload()" class="w-full py-4 bg-[#D4AF37] text-black rounded-xl text-[10px] font-black uppercase">Download Segment</button>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+    } catch (e) { 
+        alert("API Error!"); 
+    } finally {
+        btn.innerText = "ANALYZE & TRACK ACTIVE SPEAKER";
+        btn.disabled = false;
+    }
+}
 
             function uploadVideo() {
                 const fileInput = document.getElementById('videoFile');
