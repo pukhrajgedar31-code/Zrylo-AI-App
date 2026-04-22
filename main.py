@@ -181,7 +181,7 @@ def index():
 }
 
             function getID(url) {
-                const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                const reg = /^.*(youtu.be\\/|v\\/|u\\/\\w\\/|embed\\/|watch\\?v=|\\&v=)([^#\\&\\?]*).*/;
                 const match = url.match(reg);
                 return (match && match[2].length == 11) ? match[2] : null;
             }
@@ -552,14 +552,23 @@ def legal_pages(page_type):
     </body></html>
     """, title=page['title'], body=page['body'])
 
+from werkzeug.utils import secure_filename  # ADD THIS IMPORT
+
 @app.route('/api/upload', methods=['POST'])
 def handle_upload():
-    if 'video_file' not in request.files: return jsonify({"status": "error"}), 400
+    if 'video_file' not in request.files:
+        return jsonify({"status": "error"}), 400
+
     file = request.files['video_file']
-    if not os.path.exists('uploads'): os.makedirs('uploads')
+
+    if not os.path.exists('uploads'):
+        os.makedirs('uploads')
+
     filename = secure_filename(file.filename)
-save_path = os.path.join('uploads', filename)
-    file.save(save_path)
+    save_path = os.path.join('uploads', filename)
+
+    file.save(save_path)  # ✅ FIXED INDENT
+
     return jsonify({"status": "success", "file_path": save_path})
 @app.route('/api/check-pro')
 def check_pro():
