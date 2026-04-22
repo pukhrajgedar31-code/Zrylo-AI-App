@@ -222,29 +222,19 @@ def index():
                     data.segments.forEach((seg, i) => {
                         const ifId = `v_${i}`; const oId = `o_${i}`;
                         grid.innerHTML += `
-    <div class="clip-card p-2">
-        <div id="${oId}" onclick="playOne('${oId}', '${ifId}')" class="audio-overlay">
-            <div class="unmute-badge">🔊 UNMUTE & TRACK</div>
-        </div>
-
-        <div class="vertical-container rounded-[35px]">
-            <iframe id="${ifId}" class="speaker-video"
-                src="https://www.youtube.com/embed/${vidId}?start=${seg.start}&autoplay=1&mute=1&controls=0"
-                frameborder="0"></iframe>
-        </div>
-
-        <div class="p-8">
-            <p class="text-[10px] text-zinc-400 mb-8 italic border-l-2 border-[#D4AF37] pl-4">
-                ${seg.reason}
-            </p>
-
-            <button onclick="handleDownload(${seg.start})"
-                class="w-full py-4 bg-[#D4AF37] text-black rounded-xl text-[10px] font-black uppercase">
-                Download Segment
-            </button>
-
-        </div>
-    </div>`;
+                            <div class="clip-card p-2">
+                                <div id="${oId}" onclick="playOne('${oId}', '${ifId}')" class="audio-overlay">
+                                    <div class="unmute-badge">🔊 UNMUTE & TRACK</div>
+                                </div>
+                                <div class="vertical-container rounded-[35px]">
+                                    <iframe id="${ifId}" class="speaker-video" src="https://www.youtube.com/embed/${vidId}?start=${seg.start}&autoplay=1&mute=1&controls=0" frameborder="0"></iframe>
+                                </div>
+                                <div class="p-8">
+                                    <p class="text-[10px] text-zinc-400 mb-8 italic border-l-2 border-[#D4AF37] pl-4">${seg.reason}</p>
+                                    <button onclick="handleDownload()" class="w-full py-4 bg-[#D4AF37] text-black rounded-xl text-[10px] font-black uppercase">Download Segment</button>
+                                </div>
+                            </div>`;
+                    });
                 } catch (e) { alert("API Error!"); }
                 btn.innerText = "ANALYZE & TRACK ACTIVE SPEAKER";
                 btn.disabled = false;
