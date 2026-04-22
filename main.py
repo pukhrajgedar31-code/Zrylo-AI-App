@@ -169,14 +169,15 @@ def index():
             function closeAuth() { document.getElementById('authModal').style.display = 'none'; }
             function checkAuth() { if(!isLoggedIn) { openAuth(); return false; } return true; }
             
-          async function handleDownload() {
+         async function handleDownload(start) {
     const res = await fetch('/api/check-pro');
     const data = await res.json();
 
     if (!data.is_pro) {
         document.getElementById('payModal').style.display = 'flex';
     } else {
-        alert("Download Started in 4K Quality!");
+        alert("Download Started in 4K Quality! 🚀");  // ✅ message added
+        window.location.href = `/api/download/${start}`;  // ✅ real download
     }
 }
 
@@ -582,6 +583,26 @@ def check_pro():
     conn.close()
 
     return jsonify({"is_pro": user[0] == 1 if user else False})
+from flask import send_file
+
+@app.route('/api/download/<int:start>')
+def download_clip(start):
+    if 'user' not in session:
+        return "Unauthorized", 401
+
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT is_pro FROM users WHERE email=?", (session['user'],))
+    user = c.fetchone()
+    conn.close()
+
+    if not user or user[0] != 1:
+        return "Upgrade to PRO", 403
+
+    # Demo file (IMPORTANT: create this file in your project folder)
+    file_path = "sample.mp4"
+
+    return send_file(file_path, as_attachment=True)
 
 import os
 if __name__ == "__main__":
