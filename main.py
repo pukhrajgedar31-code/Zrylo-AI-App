@@ -587,22 +587,30 @@ from flask import send_file
 
 @app.route('/api/download/<int:start>')
 def download_clip(start):
-    if 'user' not in session:
-        return "Unauthorized", 401
+    try:
+        if 'user' not in session:
+            return "Unauthorized", 401
 
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT is_pro FROM users WHERE email=?", (session['user'],))
-    user = c.fetchone()
-    conn.close()
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("SELECT is_pro FROM users WHERE email=?", (session['user'],))
+        user = c.fetchone()
+        conn.close()
 
-    if not user or user[0] != 1:
-        return "Upgrade to PRO", 403
+        if not user or user[0] != 1:
+            return "Upgrade to PRO", 403
 
-    # Demo file (IMPORTANT: create this file in your project folder)
-    file_path = os.path.join(os.getcwd(), "sample.mp4")
+        file_path = os.path.join(os.getcwd(), "sample.mp4")
 
-    return send_file(file_path, as_attachment=True)
+        # ✅ 🔥 ADD YOUR CHECK HERE (IMPORTANT)
+        if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+            return "Invalid or empty video file!", 400
+
+        # ✅ THEN SEND FILE
+        return send_file(file_path, as_attachment=True)
+
+    except Exception as e:
+        return f"Server Error: {str(e)}", 500
 
 import os
 if __name__ == "__main__":
