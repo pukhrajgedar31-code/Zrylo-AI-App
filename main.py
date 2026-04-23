@@ -231,7 +231,7 @@ def index():
                                 </div>
                                 <div class="p-8">
                                     <p class="text-[10px] text-zinc-400 mb-8 italic border-l-2 border-[#D4AF37] pl-4">${seg.reason}</p>
-                                    <button onclick="handleDownload()" class="w-full py-4 bg-[#D4AF37] text-black rounded-xl text-[10px] font-black uppercase">Download Segment</button>
+                                    <button onclick="handleDownload(${seg.start})" ... class="w-full py-4 bg-[#D4AF37] text-black rounded-xl text-[10px] font-black uppercase">Download Segment</button>
                                 </div>
                             </div>`;
                     });
