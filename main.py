@@ -506,10 +506,22 @@ def admin_make_pro(uid):
     # Wapas admin panel par bhej do
     return redirect(f'/zrylo-admin?key={ADMIN_SECRET_KEY}')
 
+cache = {}
+
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
-    if 'user' not in session: return jsonify({"status": "unauthorized"}), 401
-    segs = [{"start": random.randint(10, 500), "reason": "AI Speaker Tracking Active"} for i in range(10)]
+    if 'user' not in session:
+        return jsonify({"status": "unauthorized"}), 401
+
+    data = request.json
+    url = data.get("url")
+
+    if url in cache:
+        return jsonify({"status": "success", "segments": cache[url]})
+
+    segs = [{"start": random.randint(10, 500), "reason": "AI Speaker Tracking Active"} for _ in range(10)]
+
+    cache[url] = segs
     return jsonify({"status": "success", "segments": segs})
 
 @app.route('/legal/<page_type>')
@@ -562,11 +574,11 @@ def handle_upload():
 
     file = request.files['video_file']
 
-    if not os.path.exists('uploads'):
-        os.makedirs('uploads')
+    UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
     filename = secure_filename(file.filename)
-    save_path = os.path.join('uploads', filename)
+    save_path = os.path.join(UPLOAD_FOLDER, filename)
 
     file.save(save_path)  # ✅ FIXED INDENT
 
@@ -615,4 +627,4 @@ def download_clip(start):
 import os
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, threaded=True)
