@@ -612,7 +612,20 @@ def download_clip(start):
         if not user or user[0] != 1:
             return "Upgrade to PRO", 403
 
-        file_path = os.path.join(os.getcwd(), "sample.mp4")
+        filename = session.get('uploaded_video')
+
+if not filename:
+    return "No uploaded video found", 400
+
+input_video = os.path.join("uploads", filename)
+output_video = os.path.join("uploads", f"clip_{start}.mp4")
+
+start_time = int(start)
+duration = random.randint(10, 20)
+
+os.system(f"ffmpeg -i {input_video} -ss {start_time} -t {duration} -c copy {output_video}")
+
+file_path = output_video
 
         # ✅ 🔥 ADD YOUR CHECK HERE (IMPORTANT)
         if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
